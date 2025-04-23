@@ -25,7 +25,7 @@ export default async function handler(req, res) {
           const userMessage = event.message.text;
 
           const chatResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [
               { role: "system", content: "你是一個親切的 LINE 聊天夥伴。" },
               { role: "user", content: userMessage },
