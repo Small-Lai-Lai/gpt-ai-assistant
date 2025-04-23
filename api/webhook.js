@@ -1,30 +1,52 @@
-{
-  "name": "gpt-ai-assistant",
-  "version": "4.9.1",
-  "type": "module",
-  "scripts": {
-    "dev": "nodemon api/index.js",
-    "start": "node api/index.js",
-    "test": "jest"
-  },
-  "dependencies": {
-    "axios": "^1.2.1",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "form-data": "^4.0.0",
-    "gpt-3-encoder": "^1.1.3",
-    "opencc-js": "^1.0.5",
-    "@line/bot-sdk": "^7.5.0",
-    "openai": "^4.20.0"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.20.5",
-    "@babel/preset-env": "^7.20.2",
-    "@jest/globals": "^29.3.1",
-    "babel-jest": "^29.3.1",
-    "eslint": "^8.29.0",
-    "eslint-config-airbnb": "^19.0.4",
-    "jest": "^29.3.1",
-    "nodemon": "^2.0.20"
+import { Configuration, OpenAIApi } from "openai";
+import { middleware, Client } from "@line/bot-sdk";
+
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
+
+const client = new Client(config);
+
+const openai = new OpenAIApi(
+  new Configuration({
+    apiKey: process.env.OPENAI_API_KEY,
+  })
+);
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
+  try {
+    const events = req.body.events;
+    const results = await Promise.all(
+      events.map(async (event) => {
+        if (event.type === "message" && event.message.type === "text") {
+          const userMessage = event.message.text;
+
+          const chatResponse = await openai.createChatCompletion({
+            model: "gpt-4",
+            messages: [
+              { role: "system", content: "你是一個親切的 LINE 聊天夥伴。" },
+              { role: "user", content: userMessage },
+            ],
+          });
+
+          const replyText = chatResponse.data.choices[0].message.content.trim();
+
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: replyText,
+          });
+        }
+      })
+    );
+
+    return res.status(200).json({ status: "ok", results });
+  } catch (err) {
+    console.error("Webhook handler error:", err);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 }
