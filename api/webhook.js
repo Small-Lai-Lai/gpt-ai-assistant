@@ -1,4 +1,4 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import { middleware, Client } from "@line/bot-sdk";
 
 const config = {
@@ -8,11 +8,9 @@ const config = {
 
 const client = new Client(config);
 
-const openai = new OpenAIApi(
-  new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-  })
-);
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -26,7 +24,7 @@ export default async function handler(req, res) {
         if (event.type === "message" && event.message.type === "text") {
           const userMessage = event.message.text;
 
-          const chatResponse = await openai.createChatCompletion({
+          const chatResponse = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [
               { role: "system", content: "你是一個親切的 LINE 聊天夥伴。" },
@@ -34,7 +32,7 @@ export default async function handler(req, res) {
             ],
           });
 
-          const replyText = chatResponse.data.choices[0].message.content.trim();
+          const replyText = chatResponse.choices[0].message.content.trim();
 
           return client.replyMessage(event.replyToken, {
             type: "text",
